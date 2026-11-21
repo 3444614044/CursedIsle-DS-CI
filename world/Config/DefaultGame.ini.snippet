@@ -1,0 +1,36 @@
+; =====================================================================
+; 世界层 Game 配置片段 —— ★ 追加/合并进 <GameProject>/Config/DefaultGame.ini
+; 不要整文件覆盖；只改下面这几项。
+; =====================================================================
+
+[/Script/EngineSettings.GeneralProjectSettings]
+; ★ 必须与客户端完全一致：UE4CommandLine.txt 里是
+;   ../../../CursedIsle/CursedIsle.uproject  →  工程名 CursedIsle
+; FNetworkVersion 校验和含 ProjectName + ProjectVersion，差一个字符就 invalid version
+ProjectName=CursedIsle
+ProjectVersion=0.9.9.0.849
+
+[/Script/Engine.GameSession]
+MaxPlayers=80
+bRequiresPushToTalk=False
+
+[/Script/Engine.GameMode]
+; ★ 地图名必须指向「客户端 pak 里真实存在」且「DS 侧 cook 过」的地图。
+;   pak 索引里扫到的 6 个 .umap：
+;     InitLevel / MainMenu / Orchard / ServerManager / ServerManagerWatchDog / Test
+;   Orchard 对应 /Game/Maps/WhiteOrchard 地表资产，是主世界；
+;   ServerManager 是服务器列表/区域选择关卡。
+; ★ 客户端 pak 已把 Orchard 等长改名 MyWorld（patch_map_name.py --patch-pak）
+;   两边必须用同一个字符串，否则 NMT_Welcome 下发的地图名客户端解析不到
+GameDefaultMap=/Game/Maps/MyWorld
+ServerDefaultMap=/Game/Maps/MyWorld
+; ★ 这里的类路径必须能被客户端解析。若已把 world/Source 合进 CursedIsle 主模块，
+;   类名是 /Script/CursedIsle.ACIWorldGameMode；如果客户端 pak 里用的是蓝图
+;   GameMode，则必须改成那个蓝图路径（见 README 类映射表）。
+GlobalDefaultGameMode=/Script/CursedIsleWorld.ACIWorldGameMode
+GlobalDefaultServerGameMode=/Script/CursedIsleWorld.ACIWorldGameMode
+
+[/Script/UnrealEd.ProjectPackagingSettings]
+; DS 打包必须包含 Orchard 地图，否则 LoadMap 阶段服务端自己先失败
++MapsToCook=(FilePath="/Game/Maps/MyWorld")
++MapsToCook=(FilePath="/Game/Maps/ServerManager")

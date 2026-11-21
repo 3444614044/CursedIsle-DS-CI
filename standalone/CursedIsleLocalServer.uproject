@@ -1,0 +1,16 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "4.27",
+  "Category": "LocalDev",
+  "Description": "CursedIsle 本地握手验证服：不依赖游戏模块，只用引擎自带模块验证 UE4 NetDriver 握手与网络版本",
+  "Modules": [
+    {
+      "Name": "CursedIsleLocalServer",
+      "Type": "Runtime",
+      "LoadingPhase": "Default",
+      "AdditionalDependencies": ["Engine"]
+    }
+  ],
+  "Plugins": [],
+  "TargetPlatforms": ["Linux", "Win64"]
+}

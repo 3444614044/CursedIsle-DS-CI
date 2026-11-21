@@ -1,0 +1,88 @@
+name: Build CursedIsle DS (LinuxArm64, UE4.27)
+
+# 推送后到 Actions 页面手动 Run workflow；也可 gh workflow run build-ds.yml
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: "UE4.27 ARM64 平台名（报错 Unknown platform 就切另一个）"
+        required: true
+        default: LinuxArm64
+        type: choice
+        options: [LinuxArm64, LinuxAArch64]
+      config:
+        description: "构建配置"
+        required: true
+        default: Development
+        type: choice
+        options: [Development, Shipping]
+      image:
+        description: "构建镜像 tag"
+        required: true
+        default: wukakuki/unreal-engine:dev-slim-4.27.2
+
+env:
+  # 本仓库根就是工程根（standalone/ 在根下），不要再套一层 ue4_ds/
+  PROJ: ${{ github.workspace }}/standalone/CursedIsleLocalServer.uproject
+  PLATFORM: ${{ github.event.inputs.platform || 'LinuxArm64' }}
+  CONFIG: ${{ github.event.inputs.config || 'Development' }}
+
+jobs:
+  ds:
+    runs-on: ubuntu-24.04-arm          # 原生 ARM64 runner，公开仓库免费
+    container:
+      image: ${{ github.event.inputs.image || 'wukakuki/unreal-engine:dev-slim-4.27.2' }}
+      options: --user root
+    timeout-minutes: 360
+    steps:
+      - name: 环境 / 磁盘
+        run: |
+          set -e
+          echo "arch: $(uname -m)"      # 应为 aarch64
+          rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* || true
+          df -h
+
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 1 }
+
+      - name: 修权限（容器内以 ue4 用户构建）
+        run: chown -R ue4:ue4 "$GITHUB_WORKSPACE"
+
+      # 只编译 Server target，不 cook、不 stage —— 要的就是那个 ELF
+      - name: BuildTarget LinuxARM64 Server
+        shell: bash
+        run: |
+          set -e
+          runuser -u ue4 -- \
+          /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildTarget \
+            -project="$PROJ" \
+            -Target=CursedIsleLocalServerServer \
+            -TargetPlatform="$PLATFORM" \
+            -BuildConfiguration="$CONFIG" \
+            -NoP4 -WaitMutex -utf8output -unattended
+
+      - name: 抽取 DS 二进制
+        shell: bash
+        run: |
+          set -e
+          mkdir -p /out
+          BIN=$(find "$GITHUB_WORKSPACE/standalone/Binaries" -type f \
+                  -name 'CursedIsleLocalServerServer*' -perm -u+x 2>/dev/null | head -n 1)
+          [ -n "$BIN" ] || { echo "✘ 没找到产物，列一下 Binaries:"; find "$GITHUB_WORKSPACE/standalone/Binaries" -maxdepth 3 2>/dev/null; exit 1; }
+          cp "$BIN" /out/CursedIsleLocalServerServer
+          chmod +x /out/CursedIsleLocalServerServer
+          ls -lh /out/CursedIsleLocalServerServer
+          file /out/CursedIsleLocalServerServer || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CursedIsleDS-4.27-${{ github.event.inputs.platform || 'LinuxArm64' }}-${{ github.event.inputs.config || 'Development' }}
+          path: /out/CursedIsleLocalServerServer
+          retention-days: 30
+
+      - name: 失败抓日志
+        if: failure()
+        run: |
+          find "$HOME/Library/Logs/Unreal Engine/LocalBuildLogs" \
+               "$GITHUB_WORKSPACE/standalone/Saved/Logs" -name '*.log' 2>/dev/null \
+            | head -5 | xargs -r -I{} sh -c 'echo "===== {} ====="; tail -n 150 "{}"'

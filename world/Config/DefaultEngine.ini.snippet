@@ -1,0 +1,49 @@
+; =====================================================================
+; 世界层 Engine 配置片段 —— 合并进 <GameProject>/Config/DefaultEngine.ini
+; 与 standalone/ 的握手服配置一致，额外打开复制/网络日志便于诊断。
+; =====================================================================
+
+[/Script/Engine.GameEngine]
+!NetDriverDefinitions=ClearArray
++NetDriverDefinitions=(DefName="GameNetDriver", DriverClassName="/Script/OnlineSubsystemUtils.IpNetDriver", DriverClassNameFallback="/Script/OnlineSubsystemUtils.IpNetDriver")
+
+[/Script/OnlineSubsystemUtils.IpNetDriver]
+NetServerMaxTickRate=30
+LanServerMaxTickRate=35
+MaxClientRate=15000
+MaxInternetClientRate=10000
+ConnectionTimeout=60.0
+InitialConnectTimeout=120.0
+RelevantTimeout=5.0
+SpawnPrioritySeconds=1.0
+ServerTravelPause=4.0
+AllowPeerConnections=False
+MaxPortCountToTry=512
+; ★ 世界层每玩家有 ~10 个复制属性 + Pawn Transform，80 人时要给足带宽
+; 若出现 "Network saturation" 可调高 MaxClientRate 或降低 NetServerMaxTickRate
+
+[/Script/Engine.NetDriver]
+NetConnectionClassName="/Script/OnlineSubsystemUtils.IpConnection"
+
+[OnlineSubsystem]
+DefaultPlatformService=Null
+bHasVoiceEnabled=False
+
+[SystemSettings]
+net.MaxNetStringSize=1024
+; 世界层诊断：打开属性复制与 RPC 日志（上线前关掉，量很大）
+; net.DormancyEnable=1
+; net.IsPushModelEnabled=0
+
+[/Script/Engine.Server]
+bDisableTickSmoothing=True
+
+[Core.Log]
+LogNet=Verbose
+LogNetVersion=Verbose
+LogNetTraffic=Log
+LogGameMode=Verbose
+LogWorld=Log
+LogCIWorld=Verbose
+LogCIWorldRules=Log
+LogCIWorldSave=Log
