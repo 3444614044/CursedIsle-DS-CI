@@ -11,6 +11,5 @@
       "AdditionalDependencies": ["Engine"]
     }
   ],
-  "Plugins": [],
-  "TargetPlatforms": ["Linux", "Win64"]
+  "Plugins": []
 }
